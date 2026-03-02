@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Arcade Futbol</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+    <!-- PeerJS for Online Multiplayer -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            alert("HATA: " + msg + "\nSatır: " + line + "\nSütun: " + col);
+            return false;
+        };
+    </script>
+</head>
+
+<body>
+
+    <div class="game-container">
+        <!-- Scoreboard -->
+        <div id="scoreboard" class="scoreboard">
+            <div class="team red-team">
+                <span id="scoreRed">0</span>
+            </div>
+            <div class="timer-container">
+                <span id="timer">02:00</span>
+            </div>
+            <div class="team blue-team">
+                <span id="scoreBlue">0</span>
+            </div>
+        </div>
+
+        <!-- Goal Notification -->
+        <div id="goalNotification" class="goal-notification hidden">
+            <span id="goalText" data-i18n="goal_text">GOOOL!</span>
+        </div>
+        <!-- Chaos Notification -->
+        <div id="chaosNotification" class="hidden">
+            <div id="chaosTitle" data-i18n="chaos_title">🌀 KAOS! 🌀</div>
+            <div id="chaosList"></div>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="gameCanvas" width="1600" height="900"></canvas>
+
+        <!-- Start Screen Overlay -->
+        <div id="startScreen" class="overlay">
+            <div class="language-select" style="position: absolute; top: 10px; right: 10px;">
+                <select id="languageSelect" style="padding: 5px; font-weight: bold;">
+                    <option value="tr">🇹🇷 Türkçe</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="de">🇩🇪 Deutsch</option>
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="sv">🇸🇪 Svenska</option>
+                    <option value="ru">🇷🇺 Русский</option>
+                </select>
+            </div>
+
+            <h1 data-i18n="game_title">2D Arcade Futbol</h1>
+            <p data-i18n="start_instruction">Oynamak için Başla'ya bas!</p>
+            <p class="controls" data-i18n="controls_hint">Kırmızı: WASD | Mavi: OK TUŞLARI</p>
+
+            <div class="setup-form">
+                <div class="input-group">
+                    <label data-i18n="team_red">Kırmızı Takım:</label>
+                    <input type="text" id="p1NameInput" value="Kırmızı" maxlength="10">
+                </div>
+                <div class="input-group">
+                    <label data-i18n="team_blue">Mavi Takım:</label>
+                    <input type="text" id="p2NameInput" value="Mavi" maxlength="10">
+                </div>
+                <div class="input-group">
+                    <label data-i18n="duration_label">Süre (Dk):</label>
+                    <input type="number" id="durationInput" value="2" min="1" max="10">
+                </div>
+                <div class="input-group">
+                    <label data-i18n="goal_limit_label">Hedef Skor:</label>
+                    <input type="number" id="goalLimitInput" value="5" min="1" max="20">
+                </div>
+
+                <div class="input-group full-width">
+                    <label data-i18n="game_mode_label">Oyun Modu:</label>
+                    <div class="mode-select">
+                        <label>
+                            <input type="radio" name="gameMode" value="2p" checked> <span data-i18n="mode_2p">2
+                                Oyuncu</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="gameMode" value="1p"> <span data-i18n="mode_1p">1 Oyuncu (vs
+                                Robo-Messi)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="input-group full-width">
+                    <label data-i18n="weather_label">Hava Durumu:</label>
+                    <div class="mode-select">
+                        <label>
+                            <input type="radio" name="weatherType" value="sunny" checked> <span
+                                data-i18n="weather_sunny">Güneşli ☀️</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="weatherType" value="rainy"> <span
+                                data-i18n="weather_rainy">Yağmurlu
+                                🌧️</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="weatherType" value="snowy"> <span data-i18n="weather_snowy">Karlı
+                                ❄️</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="weatherType" value="icy"> <span data-i18n="weather_icy">Buzlu
+                                🧊</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="input-group full-width">
+                    <label data-i18n="ball_choice_label">Top Seçimi:</label>
+                    <div class="mode-select">
+                        <label title="Standart Futbol Topu">
+                            <input type="radio" name="ballType" value="normal" checked> <span
+                                data-i18n="ball_normal">Normal ⚽</span>
+                        </label>
+                        <label title="Ağır, az seker, çok kaymaz">
+                            <input type="radio" name="ballType" value="bowling"> <span data-i18n="ball_bowling">Bowling
+                                🎳</span>
+                        </label>
+                        <label title="Hafif, çok seker, havada süzülür">
+                            <input type="radio" name="ballType" value="beach"> <span data-i18n="ball_beach">Plaj
+                                🏖️</span>
+                        </label>
+                        <label title="Küçük, hızlı, seker">
+                            <input type="radio" name="ballType" value="pingpong"> <span data-i18n="ball_pingpong">Pinpon
+                                🏓</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sound-toggle" style="display: flex; gap: 20px; justify-content: center;">
+                <label>
+                    <input type="checkbox" id="soundToggle" checked> <span data-i18n="sound_effects">Ses Efektleri
+                        🔊</span>
+                </label>
+            </div>
+
+            <div class="sound-toggle"
+                style="margin-top: 10px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                <label style="color: #ff4757; font-weight: bold; text-shadow: 0 0 5px #ff4757;">
+                    <input type="checkbox" id="chaosMode"> <span data-i18n="chaos_mode">🌀 KAOS MODU</span>
+                </label>
+                <label style="color: #e67e22; font-weight: bold; text-shadow: 0 0 5px #e67e22;">
+                    <input type="checkbox" id="hotPotatoMode"> <span data-i18n="bomb_mode">💣 BOMBA MODU</span>
+                </label>
+                <label style="color: #f1c40f; font-weight: bold; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);">
+                    <input type="checkbox" id="nightModeToggle"> <span data-i18n="night_mode">🌙 GECE MODU (PRO)</span>
+                </label>
+                </label>
+            </div>
+
+            <button id="onlineBtn" style="background: #8e44ad; margin-bottom: 10px;">🌐 ONLINE OYNA</button>
+            <button id="startBtn" data-i18n="start_btn">MAÇA BAŞLA</button>
+        </div>
+
+        <!-- Online Multiplayer Menu -->
+        <div id="onlineMenu" class="overlay hidden">
+            <h1 style="color: #8e44ad;">🌐 ONLINE 1v1</h1>
+            <div id="onlineStatus" style="margin-bottom: 20px; font-weight: bold; color: #f1c40f;">Bağlanıyor...</div>
+
+            <div id="hostSection" style="margin-bottom: 20px;">
+                <button id="hostBtn">ODA OLUŞTUR (P1)</button>
+                <div id="myIdDisplay" class="hidden"
+                    style="margin-top: 10px; font-size: 14px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px;">
+                    Oda Kodun: <span id="myPeerId"
+                        style="color: #2ecc71; cursor: pointer; text-decoration: underline;">...</span>
+                    <br><small>(Kopyalamak için tıkla)</small>
+                </div>
+            </div>
+
+            <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 15px 0; width: 80%;"></div>
+
+            <div id="joinSection">
+                <input type="text" id="joinIdInput" placeholder="Oda Kodunu Gir (P2)"
+                    style="width: 250px; padding: 10px; border-radius: 5px; border: none; background: #34495e; color: white;">
+                <button id="joinBtn" style="background: #27ae60; margin-top: 10px;">ODAYA KATIL</button>
+            </div>
+
+            <button id="backToMainBtn" class="secondary-btn" style="margin-top: 20px;">GERİ DÖ</button>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div id="gameOverScreen" class="overlay hidden">
+            <h1 id="winnerText" data-i18n="winner_text">KAZANAN: KIRMIZI</h1>
+            <button id="restartBtn" data-i18n="restart_btn">TEKRAR OYNA</button>
+        </div>
+        <!-- Pause Menu Overlay -->
+        <div id="pauseMenu" class="overlay hidden">
+            <h1 data-i18n="pause_title">DURAKLATILDI</h1>
+            <div class="settings-group">
+                <label for="volumeSlider" data-i18n="volume_label">Ses Seviyesi</label>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
+            </div>
+            <button id="resumeBtn" data-i18n="resume_btn">DEVAM ET</button>
+            <button id="mainMenuBtn" class="secondary-btn" data-i18n="main_menu_btn">ANA MENÜ</button>
+        </div>
+    </div>
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
